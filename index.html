@@ -262,7 +262,7 @@
 (() => {
   /* ---- omino articolato: corre, salta in spaccata, fa la capriola ---- */
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const F = {"P0":[47.291,55.676],"torso0":23.44,"top":33.6,"sa":30.2,"sb":-3.0,"wt":15.4,"wb":13.4,"head":[45.093,0.558,8.901],"ua":23.223,"fa":15.963,"th":21.744,"sh":23.129,"base":{"ua1":39.29,"fa1":95.23,"ua2":-99.77,"fa2":-24.52,"th1":57.25,"sh1":4.24,"th2":-37.85,"sh2":-119.8},"armW":7.482,"legW":9.03};
+  const F = {"P0":[47.291,55.676],"torso0":23.44,"top":33.6,"sa":30.2,"sb":-3.0,"wt":15.4,"wb":13.4,"rs":6.6,"head":[47.493,0.558,8.901],"ua":23.223,"fa":15.963,"th":21.744,"sh":23.129,"base":{"ua1":39.29,"fa1":95.23,"ua2":-99.77,"fa2":-24.52,"th1":57.25,"sh1":4.24,"th2":-37.85,"sh2":-119.8},"armW":7.482,"legW":9.03};
   const NS = "http://www.w3.org/2000/svg", R = Math.PI / 180;
   const KEYS = ["torso", "ua1", "fa1", "ua2", "fa2", "th1", "sh1", "th2", "sh2", "dy", "rot"];
   const mix = (a, b, t) => { const o = {}; for (const k of KEYS) o[k] = a[k] + (b[k] - a[k]) * t; return o; };
@@ -349,6 +349,7 @@
       mode: g.dataset.fig, speed: g.closest("svg").querySelector(".speed"), body,
       torso: el("polygon", { fill: c }, body),
       hip: el("circle", { r: F.wb / 2, fill: c }, body),
+      shoulder: el("circle", { r: F.rs, fill: c }, body),
       head: el("circle", { r: F.head[2], fill: c }, body),
       arms: el("path", { stroke: c, "stroke-width": F.armW, ...LIMB }, body),
       legs: el("path", { stroke: c, "stroke-width": F.legW, ...LIMB }, body),
@@ -367,10 +368,15 @@
       const h = [e[0] + (l2 + w / 2) * Math.sin(a2 * R), e[1] + (l2 + w / 2) * Math.cos(a2 * R)];
       return `M${pt(s)} L${pt(e)} L${pt(h)}`;
     };
-    f.torso.setAttribute("points", [L(F.top, -F.wt / 2), L(F.top, F.wt / 2), L(0, F.wb / 2), L(0, -F.wb / 2)].map(pt).join(" "));
+    /* busto: due cerchi (anca e spalla, i perni degli arti) uniti dalle tangenti esterne: niente spigoli né collo tagliato */
+    const S = L(F.sa, F.sb), r1 = F.wb / 2, r2 = F.rs;
+    const dx = S[0] - O[0], dy = S[1] - O[1], D = Math.hypot(dx, dy), th = Math.atan2(dy, dx), ph = Math.acos(Math.max(-1, Math.min(1, (r1 - r2) / D)));
+    const tg = sg => [[O[0] + r1 * Math.cos(th + sg * ph), O[1] + r1 * Math.sin(th + sg * ph)], [S[0] + r2 * Math.cos(th + sg * ph), S[1] + r2 * Math.sin(th + sg * ph)]];
+    const [p1, p2] = tg(1), [q1, q2] = tg(-1);
+    f.torso.setAttribute("points", [p1, p2, q2, q1].map(pt).join(" "));
     f.hip.setAttribute("cx", f2(O[0])); f.hip.setAttribute("cy", f2(O[1]));
+    f.shoulder.setAttribute("cx", f2(S[0])); f.shoulder.setAttribute("cy", f2(S[1]));
     const hd = L(F.head[0], F.head[1]); f.head.setAttribute("cx", f2(hd[0])); f.head.setAttribute("cy", f2(hd[1]));
-    const S = L(F.sa, F.sb);
     f.arms.setAttribute("d", limb(S, F.ua, p.ua1, F.fa, p.fa1, F.armW) + limb(S, F.ua, p.ua2, F.fa, p.fa2, F.armW));
     f.legs.setAttribute("d", limb(O, F.th, p.th1, F.sh, p.sh1, F.legW) + limb(O, F.th, p.th2, F.sh, p.sh2, F.legW));
     const c = L(12, 2);
